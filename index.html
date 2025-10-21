@@ -3,9 +3,26 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Chemistry Board Game – Canva Edition</title>
+<title>Chemistry Board Game – George, Angie, Kobe, Walter, Alexander</title>
 <style>
-  
+  :root{
+    --ink:#121212; --good:#4caf50; --bad:#e74c3c; --panel:#ffffffcc;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    background:#ede7e3;
+    font-family:"Poppins", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    padding:18px;
+    padding-bottom:120px;
+  }
+
+  /* --- Board container with your Canva board image --- */
   .board-wrap{
     position:relative;
     width:min(1200px, 95vw);
@@ -14,6 +31,7 @@
     border-radius:16px;
     overflow:hidden;
     box-shadow:0 12px 40px #00000020;
+    margin-bottom:100px; /* space for HUD */
   }
 
   .board-bg{
@@ -22,6 +40,22 @@
     z-index:1;
   }
 
+  /* --- Center dice --- */
+  .dice{
+    position:absolute; inset:0; margin:auto;
+    width:min(18vmin,140px); height:min(18vmin,140px);
+    border-radius:22px; background:#cc6b6b; color:#fff;
+    display:grid; place-items:center;
+    font-weight:900; font-size:42px;
+    cursor:pointer; user-select:none;
+    box-shadow:inset 0 -8px 0 #00000025, 0 10px 25px #00000025;
+    transition: transform .08s ease-in-out, rotate .4s ease;
+    z-index:5;
+  }
+  .dice:active{ transform: scale(.98) }
+  .roll-hint{ position:absolute; left:50%; top:56%; transform:translateX(-50%); font-size:14px; background:#ffffffcc; padding:4px 10px; border-radius:999px }
+
+  /* --- Tokens --- */
   .token{
     position:absolute;
     width:26px; height:26px;
@@ -29,25 +63,52 @@
     border:2px solid #000;
     transform:translate(-50%,-50%);
     transition:left .35s ease, top .35s ease;
-    z-index:5; /* ensures visible above the board */
+    z-index:5;
     box-shadow:0 2px 5px #00000040;
   }
+  .p1{background:#ff5d5d}
+  .p2{background:#5d9bff}
+  .p3{background:#50d890}
+  .p4{background:#ffd166}
+  .p5{background:#b07aff}
 
-  /* Move the HUD below the board visually */
+  /* --- HUD below the board --- */
   .hud{
-    position:absolute;
-    bottom:-80px; /* pushes it below the board */
-    left:50%;
-    transform:translateX(-50%);
     display:flex;
-    gap:12px;
     flex-wrap:wrap;
     justify-content:center;
+    gap:12px;
+    position:relative;
+    bottom:0;
   }
+  .panel{
+    background:var(--panel);
+    backdrop-filter:blur(4px);
+    border:1px solid #00000018;
+    border-radius:12px;
+    padding:10px 14px;
+    box-shadow:0 8px 24px #00000020;
+  }
+  .row{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+  .btn{border:0; border-radius:10px; padding:8px 14px; font-weight:700; cursor:pointer; background:#111; color:#fff}
+  .btn.alt{background:#fff; color:#111; border:2px solid #00000022}
 
-  /* Make sure the body allows extra vertical space for HUD */
-  body{ padding-bottom:120px; }
+  /* --- Modal for questions/reactions --- */
+  .modal{position:fixed; inset:0; background:#00000066; display:none; align-items:center; justify-content:center; z-index:50; padding:18px}
+  .modal.show{display:flex}
+  .dialog{background:#fff; width:min(720px, 95vw); border-radius:16px; border:2px solid #00000020; padding:18px}
+  .dialog h2{margin:0 0 8px 0}
+  .options{display:grid; gap:10px; margin-top:10px}
+  .optBtn{border:2px solid #00000020; border-radius:12px; background:#fff; padding:12px; text-align:left; font-weight:700; cursor:pointer}
+  .optBtn:hover{border-color:#00000045}
+  .banner{padding:10px 12px; border-radius:12px; color:#fff; font-weight:800}
+  .good{background:var(--good)} .bad{background:var(--bad)}
 
+  /* turn / score chips */
+  .chip{border-radius:999px; padding:4px 10px; background:#00000010; font-weight:700}
+  .chip.dark{background:#111; color:#fff}
+
+  @media (max-width:780px){ .row{justify-content:center} }
 </style>
 </head>
 <body>
@@ -60,31 +121,31 @@
   <div class="roll-hint" id="rollHint">Tap dice to roll</div>
 
   <!-- Player tokens (absolute, positioned by JS) -->
-  <div id="t1" class="token p1"></div>
-  <div id="t2" class="token p2"></div>
-  <div id="t3" class="token p3"></div>
-  <div id="t4" class="token p4"></div>
-  <div id="t5" class="token p5"></div>
+  <div id="t1" class="token George"></div>
+  <div id="t2" class="token Angie"></div>
+  <div id="t3" class="token Kobe"></div>
+  <div id="t4" class="token Walter"></div>
+  <div id="t5" class="token Alexander"></div>
+</div>
 
-  <!-- HUD -->
-  <div class="hud">
-    <div class="panel">
-      <div class="row" style="gap:6px">
-        <b>Players:</b>
-        <select id="playerCount" class="btn alt" style="padding:6px 10px">
-          <option>2</option><option>3</option><option>4</option><option selected>5</option>
-        </select>
-        <button id="apply" class="btn">Apply</button>
-        <button id="reset" class="btn alt">Restart</button>
-      </div>
+<!-- HUD BELOW BOARD -->
+<div class="hud">
+  <div class="panel">
+    <div class="row" style="gap:6px">
+      <b>Players:</b>
+      <select id="playerCount" class="btn alt" style="padding:6px 10px">
+        <option>2</option><option>3</option><option>4</option><option selected>5</option>
+      </select>
+      <button id="apply" class="btn">Apply</button>
+      <button id="reset" class="btn alt">Restart</button>
     </div>
-    <div class="panel">
-      <div class="row" style="gap:12px">
-        <span class="chip dark" id="turnChip">Turn: –</span>
-        <span class="chip" id="rollChip">Roll to start</span>
-      </div>
-      <div id="scores" class="row" style="margin-top:8px"></div>
+  </div>
+  <div class="panel">
+    <div class="row" style="gap:12px">
+      <span class="chip dark" id="turnChip">Turn: –</span>
+      <span class="chip" id="rollChip">Roll to start</span>
     </div>
+    <div id="scores" class="row" style="margin-top:8px"></div>
   </div>
 </div>
 
@@ -93,246 +154,178 @@
 
 <script>
 /* ===========================================================
-   1) GAME DATA
-   - Path = 20 spaces, clockwise, starting at bottom-left START.
-   - BOARD entries derived from your PNG order (you said “use in
-     the order I sent”). You can tweak text/answers later easily.
-   =========================================================== */
+   GAME DATA + PATH
+=========================================================== */
 
 const BOARD = [
   {type:'start', label:'START'},
   {type:'finish', label:'FINISH'},
-  {type:'question', q:'Pure water has a pH of 7. This means pure water is:', choices:['Basic','Neutral','Corrosive','Acidic'], answer:'B', points:{correct:2, wrong:-1}},
-  {type:'question', q:'Which piece of lab equipment is used to precisely measure a specific volume of liquid?', choices:['Beaker','Erlenmeyer Flask','Test Tube','Graduated Cylinder'], answer:'D', points:{correct:2, wrong:-1}},
-  {type:'question', q:'Which of the following describes a chemical change?', choices:['Water boiling to create steam','A candle burning','Breaking a glass bottle','Ice melting into water'], answer:'B', points:{correct:2, wrong:-1}},
-  {type:'question', q:'Which unit is commonly used to measure the mass of a substance in chemistry?', choices:['Liter','Celsius','Gram','Meter'], answer:'C', points:{correct:2, wrong:-1}},
-  {type:'question', q:'An atom that has gained or lost electrons is called what?', choices:['An isotope','An element','An ion','A molecule'], answer:'C', points:{correct:2, wrong:-1}},
-  {type:'question', q:'What type of chemical bond involves the sharing of electrons between atoms?', choices:['Ionic bond','Metallic bond','Hydrogen bond','Covalent bond'], answer:'D', points:{correct:2, wrong:-1}},
-  {type:'reaction', text:'You created table salt using Sodium and Chlorine. +2 points.', effect:{points:+2}},
   {type:'reaction', text:'Catalyst speeds up reaction — move ahead 2 spaces.', effect:{move:+2}},
   {type:'reaction', text:'Element found in meteorite sample — +5 points.', effect:{points:+5}},
   {type:'reaction', text:'Fake element reported — lose 2 points for bad data.', effect:{points:-2}},
-  {type:'reaction', text:'JAIL TIME — you lose your next turn.', effect:{skip:1}},
-  {type:'reaction', text:'Phosphorus reacts with oxygen — move up one space.', effect:{move:+1}},
-  {type:'reaction', text:'Give a simple present sentence using “usually.” (Teacher judges) If good: +2.', teacher:true},
-  {type:'reaction', text:'What happens to the verb “cry” in third person singular? (Answer: “cries”) If correct: +1.', teacher:true},
-  {type:'reaction', text:'Say a negative sentence in the simple present about food. If good: +2.', teacher:true},
-  {type:'question', q:'What two things are always produced in a complete combustion of a hydrocarbon?', choices:['Oxygen and sugar','Carbon dioxide and water','Methane and heat','Carbon monoxide and ash'], answer:'B', points:{correct:2, wrong:-1}},
-  {type:'reaction', text:'Lucky step — +1 point.', effect:{points:+1}},
-  {type:'blank', label:'🙂'}
+  {type:'reaction', text:'Give an example of a simple present sentence using “usually.”', teacher:true},
+  {type:'reaction', text:'What happens to the verb “cry” in third person singular? (“cries”)', teacher:true},
+  {type:'reaction', text:'Say a negative sentence in the simple present about food.', teacher:true},
+  {type:'reaction', text:'Correct! +2 points.', effect:{points:+2}},
+  {type:'reaction', text:'Wrong! -1 point.', effect:{points:-1}},
+  {type:'reaction', text:'Jail Time — lose next turn.', effect:{skip:1}},
+  {type:'reaction', text:'All point taken — +3 points.', effect:{points:+3}},
+  {type:'question', q:'Pure water has a pH of 7. It is:', choices:['Acidic','Basic','Neutral','Corrosive'], answer:'C', points:{correct:2, wrong:-1}},
+  {type:'question', q:'Which bond shares electrons?', choices:['Ionic','Hydrogen','Covalent','Metallic'], answer:'C', points:{correct:2, wrong:-1}},
+  {type:'reaction', text:'Lucky — +1 point.', effect:{points:+1}},
+  {type:'reaction', text:'Elemental boost — move ahead 1 space.', effect:{move:+1}},
+  {type:'reaction', text:'Stable reaction — nothing happens.'},
+  {type:'reaction', text:'Volatile reaction — lose 1 point.', effect:{points:-1}},
+  {type:'reaction', text:'Perfect synthesis — +4 points.', effect:{points:+4}},
+  {type:'reaction', text:'Jail release — skip penalty removed.', effect:{skip:-1}},
 ];
 
-/* -----------------------------------------------------------
-   PATH COORDS (percent of board width/height)
-   This follows the outside trail clockwise from bottom-left.
-   If a spot is a bit off, nudge its x/y a little (+/- 1–2).
------------------------------------------------------------ */
+/* Approximate perimeter path (clockwise) */
 function buildPath(){
-  const x = (v)=>v, y=(v)=>v;
-  const bottom = [5,10,15,20,30,40,50,60,70,80];      // left → right
-  const right  = [82,72,62,52,42];                   // bottom → top
-  const top    = [32,22,12,8,18,28];                 // right → left
-  const left   = [45,55,65,75];                      // top → bottom
-
   const coords = [];
-  // bottom row (indexes 0..9)
-  bottom.forEach((xx,i)=>coords.push({x:xx, y:92}));
-  // right side (10..14)
-  right.forEach(yy=>coords.push({x:92, y:yy}));
-  // top row (15..20-ish; we need 6 to reach total 20)
-  top.forEach((xx)=>coords.push({x:xx, y:8}));
-  // left side to close (last 4 to reach 20 total)
-  left.forEach(yy=>coords.push({x:8, y:yy}));
-
-  // Trim/extend to exactly BOARD.length (20)
+  // bottom row (left to right)
+  for(let i=0;i<6;i++) coords.push({x:8+15*i, y:90});
+  // right side (bottom → top)
+  for(let i=1;i<5;i++) coords.push({x:90, y:90-18*i});
+  // top row (right → left)
+  for(let i=1;i<6;i++) coords.push({x:90-15*i, y:10});
+  // left side (top → bottom)
+  for(let i=1;i<4;i++) coords.push({x:8, y:10+20*i});
   return coords.slice(0, BOARD.length);
 }
 const PATH = buildPath();
 
-/* ===========================================================
-   2) GAME STATE
-=========================================================== */
-let players = [];
-let current = 0;
-let locked = false;
-
-const boardEl = document.getElementById('board');
-const diceEl = document.getElementById('dice');
-const rollHint = document.getElementById('rollHint');
-const scoresRow = document.getElementById('scores');
-const turnChip = document.getElementById('turnChip');
-const rollChip = document.getElementById('rollChip');
-const playerCountSel = document.getElementById('playerCount');
-document.getElementById('apply').onclick = ()=> boot( Number(playerCountSel.value||5) );
-document.getElementById('reset').onclick = ()=> boot( Number(playerCountSel.value||5) );
+let players = [], current=0, locked=false;
+const boardEl=document.getElementById('board');
+const diceEl=document.getElementById('dice');
+const rollHint=document.getElementById('rollHint');
+const scoresRow=document.getElementById('scores');
+const turnChip=document.getElementById('turnChip');
+const rollChip=document.getElementById('rollChip');
+document.getElementById('apply').onclick=()=>boot(Number(document.getElementById('playerCount').value||5));
+document.getElementById('reset').onclick=()=>boot(Number(document.getElementById('playerCount').value||5));
 
 function boot(n=5){
-  players = Array.from({length:n}, (_,i)=>({pos:0, score:0, skip:0, token:document.getElementById('t'+(i+1))}));
-  // Hide extra tokens if less than 5
+  players=Array.from({length:n},(_,i)=>({pos:0,score:0,skip:0,token:document.getElementById('t'+(i+1))}));
   for(let i=0;i<5;i++){
-    const t = document.getElementById('t'+(i+1));
-    t.style.display = i<n ? 'block' : 'none';
+    const t=document.getElementById('t'+(i+1));
+    t.style.display=i<n?'block':'none';
   }
-  // Put all tokens at start with small offsets so they don't overlap
-  players.forEach((p,i)=>placeToken(p, 0, {dx:i*2-2, dy:-i*2+2}));
-  current = 0;
-  renderScores();
-  updateTurn();
+  players.forEach((p,i)=>placeToken(p,0,tokenNudge(i)));
+  current=0; renderScores(); updateTurn();
 }
 function renderScores(){
-  scoresRow.innerHTML = '';
+  scoresRow.innerHTML='';
   players.forEach((p,i)=>{
-    const chip = document.createElement('span');
-    chip.className = 'chip';
-    chip.innerHTML = `<b>Player ${i+1}</b>: <span id="sc${i}">${p.score}</span> pts · Space <span id="sp${i}">${p.pos}</span>`;
+    const chip=document.createElement('span');
+    chip.className='chip';
+    chip.innerHTML=`<b>Player ${i+1}</b>: <span id="sc${i}">${p.score}</span> pts · Space <span id="sp${i}">${p.pos}</span>`;
     scoresRow.appendChild(chip);
   });
 }
-function updateTurn(){ turnChip.textContent = `Turn: Player ${current+1}`; }
-
-/* Position helper: place token by PATH index with small optional nudge */
-function placeToken(player, idx, nudge={dx:0,dy:0}){
-  const {x,y} = PATH[idx];
-  const rect = boardEl.getBoundingClientRect();
-  const left = rect.left + (x/100) * rect.width + nudge.dx;
-  const top  = rect.top  + (y/100) * rect.height + nudge.dy;
-  player.token.style.left = `${left}px`;
-  player.token.style.top  = `${top}px`;
+function updateTurn(){ turnChip.textContent=`Turn: Player ${current+1}`; }
+function placeToken(player,idx,nudge={dx:0,dy:0}){
+  const {x,y}=PATH[idx];
+  player.token.style.left=`${x}%`;
+  player.token.style.top=`${y}%`;
+  player.token.style.transform=`translate(-50%,-50%) translate(${nudge.dx}px,${nudge.dy}px)`;
 }
+function tokenNudge(i){return[{dx:-6,dy:-6},{dx:+6,dy:-6},{dx:+6,dy:+6},{dx:-6,dy:+6},{dx:0,dy:0}][i%5];}
 
-/* ===========================================================
-   3) TURN + DICE + LANDING
-=========================================================== */
-diceEl.addEventListener('click', ()=>{
-  if (locked || players.length===0) return;
-  const p = players[current];
-  if (p.skip>0){ p.skip--; toast(`Player ${current+1} skips this turn.`); nextTurn(); return; }
-  locked = true;
-  rollHint.style.display='none';
-  // Fun wiggle
-  diceEl.style.rotate = `${(Math.random()*2-1)*20}deg`;
-  const roll = Math.floor(Math.random()*6)+1;
-  diceEl.textContent = roll; rollChip.textContent = `Rolled ${roll}`;
-  // step-by-step move
-  let steps = roll;
-  const stepper = setInterval(()=>{
-    if (steps<=0){ clearInterval(stepper); landed(); return; }
-    p.pos = Math.min(p.pos+1, BOARD.length-1);
-    document.getElementById('sp'+current).textContent = p.pos;
-    placeToken(p, p.pos, tokenNudge(current));
+diceEl.addEventListener('click',()=>{
+  if(locked||players.length===0)return;
+  const p=players[current];
+  if(p.skip>0){p.skip--;toast(`Player ${current+1} skips this turn.`);nextTurn();return;}
+  locked=true;rollHint.style.display='none';
+  const roll=Math.floor(Math.random()*6)+1;
+  diceEl.textContent=roll;rollChip.textContent=`Rolled ${roll}`;
+  let steps=roll;
+  const stepper=setInterval(()=>{
+    if(steps<=0){clearInterval(stepper);landed();return;}
+    p.pos=Math.min(p.pos+1,BOARD.length-1);
+    document.getElementById('sp'+current).textContent=p.pos;
+    placeToken(p,p.pos,tokenNudge(current));
     steps--;
-  }, 260);
+  },250);
 });
 
-function tokenNudge(i){  // little spreads so tokens don’t overlap exactly
-  return [{dx:-6,dy:-6},{dx:+6,dy:-6},{dx:+6,dy:+6},{dx:-6,dy:+6},{dx:0,dy:0}][i%5];
-}
-
 function landed(){
-  const tile = BOARD[players[current].pos];
-  if (!tile){ locked=false; nextTurn(); return; }
-
-  if (tile.type==='question'){ showQuestion(tile); return; }
-  if (tile.type==='reaction'){ applyReaction(tile); return; }
-  if (tile.type==='finish'){ toast(`🎉 Player ${current+1} reached FINISH! (+3 pts)`); deltaScore(current, +3); locked=false; nextTurn(); return; }
-
-  // start/blank: nothing special
-  locked=false; nextTurn();
+  const tile=BOARD[players[current].pos];
+  if(!tile){locked=false;nextTurn();return;}
+  if(tile.type==='question'){showQuestion(tile);return;}
+  if(tile.type==='reaction'){applyReaction(tile);return;}
+  if(tile.type==='finish'){toast(`🎉 Player ${current+1} reached FINISH! (+3 pts)`);deltaScore(current,+3);locked=false;nextTurn();return;}
+  locked=false;nextTurn();
 }
 
-function deltaScore(i, n){ players[i].score += n; document.getElementById('sc'+i).textContent = players[i].score; }
-function nextTurn(){ current = (current+1) % players.length; updateTurn(); }
+function deltaScore(i,n){players[i].score+=n;document.getElementById('sc'+i).textContent=players[i].score;}
+function nextTurn(){current=(current+1)%players.length;updateTurn();}
 
-/* ===========================================================
-   4) MODALS + QUESTION / REACTION FLOWS
-=========================================================== */
-const modal = document.getElementById('modal');
-const modalContent = document.getElementById('modalContent');
-function openModal(html){ modalContent.innerHTML = html; modal.classList.add('show'); }
-function closeModal(){ modal.classList.remove('show'); }
-modal.addEventListener('click', (e)=>{ if(e.target===modal) closeModal(); });
+/* --- Modal Logic --- */
+const modal=document.getElementById('modal');
+const modalContent=document.getElementById('modalContent');
+function openModal(html){modalContent.innerHTML=html;modal.classList.add('show');}
+function closeModal(){modal.classList.remove('show');}
+modal.addEventListener('click',(e)=>{if(e.target===modal)closeModal();});
 
 function toast(text){
   openModal(`<div class="banner" style="background:#111">${text}</div>
-    <div style="text-align:right;margin-top:10px"><button class="btn" id="ok">OK</button></div>`);
-  modal.querySelector('#ok').addEventListener('click', ()=> closeModal());
+  <div style="text-align:right;margin-top:10px"><button class="btn" id="ok">OK</button></div>`);
+  modal.querySelector('#ok').addEventListener('click',()=>closeModal());
 }
 
 function showQuestion(tile){
-  const letters = ['A','B','C','D'];
-  const opts = tile.choices.map((t,idx)=>(
-    `<button class="optBtn" data-k="${letters[idx]}"><b>${letters[idx]}.</b> ${t}</button>`
-  )).join('');
-  openModal(`
-    <h2>Question</h2>
-    <div style="font-size:18px">${tile.q}</div>
-    <div class="options">${opts}</div>
-    <div style="text-align:right;margin-top:10px"><button class="btn alt" id="skip">Skip</button></div>
-  `);
+  const letters=['A','B','C','D'];
+  const opts=tile.choices.map((t,idx)=>`<button class="optBtn" data-k="${letters[idx]}"><b>${letters[idx]}.</b> ${t}</button>`).join('');
+  openModal(`<h2>Question</h2><div style="font-size:18px">${tile.q}</div><div class="options">${opts}</div>`);
   modal.querySelectorAll('.optBtn').forEach(btn=>{
-    btn.addEventListener('click', e=>{
-      const k = e.currentTarget.getAttribute('data-k');
-      const correct = tile.answer;
-      if (k===correct){
-        const gain = tile.points?.correct ?? 2;
-        deltaScore(current, gain);
-        openModal(`<div class="banner good">✅ Correct! +${gain} pts</div>
-          <div style="text-align:right;margin-top:10px"><button class="btn" id="go">Continue</button></div>`);
-      } else {
-        const loss = tile.points?.wrong ?? -1;
-        deltaScore(current, loss);
-        openModal(`<div class="banner bad">❌ Wrong. ${loss} pt</div>
-          <div style="text-align:right;margin-top:10px"><button class="btn" id="go">Continue</button></div>`);
+    btn.addEventListener('click',e=>{
+      const k=e.currentTarget.getAttribute('data-k');
+      const correct=tile.answer;
+      if(k===correct){
+        const gain=tile.points?.correct??2;
+        deltaScore(current,gain);
+        openModal(`<div class="banner good">✅ Correct! +${gain} pts</div><div style="text-align:right;margin-top:10px"><button class="btn" id="go">Continue</button></div>`);
+      }else{
+        const loss=tile.points?.wrong??-1;
+        deltaScore(current,loss);
+        openModal(`<div class="banner bad">❌ Wrong. ${loss} pt</div><div style="text-align:right;margin-top:10px"><button class="btn" id="go">Continue</button></div>`);
       }
-      modal.querySelector('#go').addEventListener('click', ()=>{ closeModal(); locked=false; nextTurn(); });
+      modal.querySelector('#go').addEventListener('click',()=>{closeModal();locked=false;nextTurn();});
     });
   });
-  modal.querySelector('#skip').addEventListener('click', ()=>{ closeModal(); locked=false; nextTurn(); });
 }
 
 function applyReaction(tile){
-  // Teacher-judged prompts
-  if (tile.teacher){
-    openModal(`
-      <h2>Reaction</h2>
-      <div style="font-size:18px">${tile.text}</div>
+  if(tile.teacher){
+    openModal(`<h2>Reaction</h2><div style="font-size:18px">${tile.text}</div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
         <button class="btn alt" id="no">Mark Wrong (−1)</button>
         <button class="btn" id="yes">Mark Correct (+2)</button>
-      </div>
-    `);
-    modal.querySelector('#yes').addEventListener('click', ()=>{ deltaScore(current, +2); closeModal(); locked=false; nextTurn(); });
-    modal.querySelector('#no').addEventListener('click', ()=>{ deltaScore(current, -1); closeModal(); locked=false; nextTurn(); });
+      </div>`);
+    modal.querySelector('#yes').addEventListener('click',()=>{deltaScore(current,+2);closeModal();locked=false;nextTurn();});
+    modal.querySelector('#no').addEventListener('click',()=>{deltaScore(current,-1);closeModal();locked=false;nextTurn();});
     return;
   }
-
-  // Automatic effects
-  let msg = tile.text || 'Event';
-  const eff = tile.effect || {};
-  if (eff.points){ deltaScore(current, eff.points); msg += ` (${eff.points>0?'+':''}${eff.points} pts)`; }
-  if (eff.move){
-    const p = players[current];
-    p.pos = Math.min(p.pos + eff.move, BOARD.length-1);
-    document.getElementById('sp'+current).textContent = p.pos;
-    placeToken(p, p.pos, tokenNudge(current));
-    msg += ` (moved ${eff.move>0?'+':''}${eff.move})`;
+  let msg=tile.text||'Event';
+  const eff=tile.effect||{};
+  if(eff.points){deltaScore(current,eff.points);msg+=` (${eff.points>0?'+':''}${eff.points} pts)`;}
+  if(eff.move){
+    const p=players[current];
+    p.pos=Math.min(p.pos+eff.move,BOARD.length-1);
+    document.getElementById('sp'+current).textContent=p.pos;
+    placeToken(p,p.pos,tokenNudge(current));
+    msg+=` (moved ${eff.move>0?'+':''}${eff.move})`;
   }
-  if (eff.skip){ players[current].skip += eff.skip; msg += ` (skip next ${eff.skip})`; }
-
+  if(eff.skip){players[current].skip+=eff.skip;msg+=` (skip next ${eff.skip})`;}
   openModal(`<h2>Reaction</h2><div style="font-size:18px">${msg}</div>
     <div style="text-align:right;margin-top:10px"><button class="btn" id="ok">Continue</button></div>`);
-  modal.querySelector('#ok').addEventListener('click', ()=>{ closeModal(); locked=false; nextTurn(); });
+  modal.querySelector('#ok').addEventListener('click',()=>{closeModal();locked=false;nextTurn();});
 }
 
-/* ===========================================================
-   5) INIT
-=========================================================== */
-window.addEventListener('resize', ()=>{
-  // Re-place tokens on resize so they stick to squares
-  players.forEach((p,i)=> placeToken(p, p.pos, tokenNudge(i)));
-});
+window.addEventListener('resize',()=>players.forEach((p,i)=>placeToken(p,p.pos,tokenNudge(i))));
 boot(5);
-players.forEach((p,i)=> placeToken(p, 0, tokenNudge(i)));
+players.forEach((p,i)=>placeToken(p,0,tokenNudge(i)));
 </script>
 </body>
 </html>

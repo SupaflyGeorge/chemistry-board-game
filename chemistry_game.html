@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Chemistry Board (Canva Companion)</title>
+<style>
+  :root{
+    --bg:#f7efeb;
+    --ink:#1f1f1f;
+    --tile:#efe7e3;
+    --pastel1:#d9c7ff; /* lilac */
+    --pastel2:#ffd3c8; /* peach */
+    --pastel3:#cfe8ff; /* baby blue */
+    --pastel4:#c8f0c8; /* mint */
+    --pastel5:#ffe68a; /* butter */
+    --good:#5aa84f;
+    --bad:#e85b4a;
+    --accent:#ff6b6b;
+    --ring:#2b2b2b30;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family: "Poppins", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
+    display:flex;min-height:100dvh;
+  }
+  /* Layout */
+  .app{display:grid;grid-template-columns: 1fr 320px;gap:20px;padding:20px;width:100%;}
+  @media(max-width:1000px){.app{grid-template-columns:1fr}}
+  .boardWrap{background:#fff8;backdrop-filter:saturate(120%) blur(2px);border-radius:18px;box-shadow:0 8px 30px #00000012; padding:18px;}
+
+  /* Board grid (outer ring of 20) */
+  .board{
+    --n:8; /* outer grid size */
+    aspect-ratio: 1/1;
+    width:100%;
+    display:grid;
+    grid-template-columns: repeat(var(--n), 1fr);
+    grid-template-rows: repeat(var(--n), 1fr);
+    position:relative;
+    border-radius:16px;
+    background:var(--bg);
+    outline:6px solid var(--ring);
+  }
+  .tile{
+    border:2px solid #00000015;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:700;
+    border-radius:10px;
+    padding:4px;
+    text-shadow: 0 1px 0 #fff8;
+  }
+  .tile small{font-weight:600;opacity:.9}
+  .num{position:absolute;inset:auto 6px 6px auto;font-size:12px;opacity:.7}
+
+  .pastel1{background:var(--pastel1)}
+  .pastel2{background:var(--pastel2)}
+  .pastel3{background:var(--pastel3)}
+  .pastel4{background:var(--pastel4)}
+  .pastel5{background:var(--pastel5)}
+
+  /* Center play area */
+  .center{
+    grid-column:2 / span 6;
+    grid-row:2 / span 6;
+    border-radius:14px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:14px;border:3px dashed #00000018;background:#fff;
+  }
+  .dice{
+    width:120px;height:120px;border-radius:20px;background:#cc6b6b;position:relative;
+    display:grid;place-items:center;color:#fff;font-size:42px;font-weight:800;
+    cursor:pointer;user-select:none;box-shadow: inset 0 -6px 0 #00000025;
+    transition: transform .08s ease-in-out;
+  }
+  .dice:active{transform:scale(.98)}
+  .rollHint{font-size:14px;opacity:.7;margin-top:-8px}
+  .btn{
+    border:0;background:#1f1f1f;color:#fff;padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer
+  }
+  .btn.alt{background:#ffffff;border:2px solid #00000025;color:#111}
+
+  /* Tokens */
+  .token{
+    width:20px;height:20px;border-radius:50%;border:2px solid #000;
+    position:absolute;transform:translate(-50%,-50%);transition: all .35s ease;
+    box-shadow:0 3px 0 #0004;
+  }
+  .p1{background:#ff5d5d}
+  .p2{background:#5d9bff}
+  .p3{background:#50d890}
+  .p4{background:#ffd166}
+  .p5{background:#b07aff}
+
+  /* Side panel */
+  .panel{display:flex;flex-direction:column;gap:12px}
+  .card{
+    background:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 8px 30px #00000010;border:1px solid #00000012;
+  }
+  .players{display:flex;flex-direction:column;gap:8px}
+  .row{display:flex;gap:8px;align-items:center;justify-content:space-between}
+  .pill{border-radius:999px;padding:4px 10px;font-weight:700}
+  .turn{background:#000;color:#fff}
+  .score{background:#00000008}
+
+  /* Modal */
+  .modal{
+    position:fixed;inset:0;background:#00000066;display:none;align-items:center;justify-content:center;padding:20px;z-index:50;
+  }
+  .modal.show{display:flex}
+  .dialog{
+    width:min(720px,95vw);background:#fff;border-radius:16px;border:2px solid #00000012;padding:18px;box-shadow:0 20px 60px #00000030
+  }
+  .dialog h2{margin:0 0 12px 0}
+  .options{display:grid;gap:8px;margin-top:10px}
+  .optBtn{
+    text-align:left;border:2px solid #00000018;border-radius:12px;padding:12px;font-weight:700;background:#fff;cursor:pointer
+  }
+  .optBtn:hover{border-color:#00000044}
+  .banner{padding:10px 12px;border-radius:10px;font-weight:800}
+  .good{background:var(--good);color:#fff}
+  .bad{background:var(--bad);color:#fff}
+
+  .legend{font-size:12px;opacity:.7}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="boardWrap">
+    <div id="board" class="board">
+      <!-- Tiles are placed programmatically -->
+      <div class="center">
+        <div id="dice" class="dice" title="Roll the dice">🎲</div>
+        <div class="rollHint">Click to roll</div>
+        <div class="legend">Answer questions, gain points, obey reactions. First to FINISH wins (or highest score if you choose).</div>
+        <div>
+          <button id="restart" class="btn alt">Restart</button>
+        </div>
+      </div>
+      <!-- tokens (absolute, positioned by JS) -->
+      <div id="t1" class="token p1" style="display:none"></div>
+      <div id="t2" class="token p2" style="display:none"></div>
+      <div id="t3" class="token p3" style="display:none"></div>
+      <div id="t4" class="token p4" style="display:none"></div>
+      <div id="t5" class="token p5" style="display:none"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="card">
+      <h3 style="margin:0 0 10px 0">Players</h3>
+      <div class="row" style="gap:6px">
+        <label>Count:</label>
+        <select id="playerCount" class="btn alt" style="padding:6px 10px">
+          <option>2</option><option>3</option><option>4</option><option selected>5</option>
+        </select>
+        <button id="applyPlayers" class="btn">Apply</button>
+      </div>
+      <div id="players" class="players"></div>
+    </div>
+
+    <div class="card">
+      <div class="row"><div class="pill turn" id="turnPill">Turn: –</div><div class="pill score" id="rollInfo">Roll to start</div></div>
+    </div>
+
+    <div class="card">
+      <b>How to play</b>
+      <ol style="margin:8px 0 0 18px;padding:0">
+        <li>Click the big dice.</li>
+        <li>Your token moves; if you land on a <b>Question</b>, answer A–D. Correct = +2, wrong = –1 (you can tweak).</li>
+        <li>If it’s a <b>Reaction</b>, the effect applies automatically (move/points/skip).</li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<!-- Question / Reaction modal -->
+<div id="modal" class="modal">
+  <div class="dialog">
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<script>
+/* =======================
+   CONFIGURABLE GAME DATA
+   ======================= */
+
+/* Tile palette cycling to mimic your Canva vibe */
+const COLORS = ["pastel1","pastel2","pastel3","pastel4","pastel5"];
+
+/* Board of 20 spaces around the ring.
+   Each item can be:
+   - {type:'start'|'finish'|'blank'}
+   - {type:'question', q, choices:[...], answer:'A'|'B'|'C'|'D', points:{correct:2, wrong:-1}}
+   - {type:'reaction', text:'...', effect:{move:+2, points:+5, skip:1}}
+*/
+const BOARD = [
+  {type:'start', label:'START', color:'pastel3'},
+  {type:'reaction', label:'Event', color:'pastel5', text:'Element found in meteorite sample — gain 5 points.', effect:{points:+5}},
+  {type:'question', label:'?', color:'pastel4',
+    q:'Which piece of lab equipment is used to precisely measure a specific volume of liquid?',
+    choices:['Beaker','Erlenmeyer Flask','Test Tube','Graduated Cylinder'], answer:'D', points:{correct:+2, wrong:-1}
+  },
+  {type:'question', label:'?', color:'pastel5',
+    q:'Pure water has a pH of 7. This means pure water is:',
+    choices:['Basic','Neutral','Corrosive','Acidic'], answer:'B', points:{correct:+2, wrong:-1}
+  },
+  {type:'reaction', label:'Event', color:'pastel2', text:'Catalyst speeds up reaction — move ahead 2 spaces.', effect:{move:+2}},
+  {type:'question', label:'?', color:'pastel1',
+    q:'Which of the following describes a chemical change?',
+    choices:['Water boiling to create steam','A candle burning','Breaking a glass bottle','Ice melting into water'], answer:'B', points:{correct:+2, wrong:-1}
+  },
+  {type:'reaction', label:'Event', color:'pastel3', text:'Fake element reported — lose 2 points for bad data.', effect:{points:-2}},
+  {type:'question', label:'?', color:'pastel4',
+    q:'Which unit is commonly used to measure the mass of a substance in chemistry?',
+    choices:['Liter','Celsius','Gram','Meter'], answer:'C', points:{correct:+2, wrong:-1}
+  },
+  {type:'question', label:'?', color:'pastel5',
+    q:'An atom that has gained or lost electrons is called what?',
+    choices:['An isotope','An element','An ion','A molecule'], answer:'C', points:{correct:+2, wrong:-1}
+  },
+  {type:'question', label:'?', color:'pastel2',
+    q:'What type of chemical bond involves the sharing of electrons between atoms?',
+    choices:['Ionic bond','Metallic bond','Hydrogen bond','Covalent bond'], answer:'D', points:{correct:+2, wrong:-1}
+  },
+  {type:'reaction', label:'Event', color:'pastel1', text:'You created table salt using Sodium and Chlorine — +2 points.', effect:{points:+2}},
+  {type:'reaction', label:'JAIL', color:'pastel3', text:'JAIL TIME — you lose your next turn.', effect:{skip:1}},
+  {type:'question', label:'?', color:'pastel4',
+    q:'What two things are always produced in a complete combustion reaction of a hydrocarbon?',
+    choices:['Oxygen and sugar','Carbon dioxide and water','Methane and heat','Carbon monoxide and ash'], answer:'B', points:{correct:+2, wrong:-1}
+  },
+  {type:'reaction', label:'Event', color:'pastel5', text:'Phosphorus reacts with oxygen — move up one space.', effect:{move:+1}},
+  {type:'reaction', label:'Event', color:'pastel2', text:'Give an example of a simple present sentence using “usually.” (Teacher judges) If good: +2.', effect:{points:+0}, teacher:true},
+  {type:'reaction', label:'Event', color:'pastel1', text:'What happens to the verb “cry” in the third person singular? (Answer: “cries”) If correct: +1.', effect:{points:+0}, teacher:true},
+  {type:'reaction', label:'Event', color:'pastel3', text:'Say a negative sentence in the simple present about food. If good: +2.', effect:{points:+0}, teacher:true},
+  {type:'blank', label:'🙂', color:'pastel4'},
+  {type:'reaction', label:'Event', color:'pastel5', text:'Lucky step — +1 point.', effect:{points:+1}},
+  {type:'finish', label:'FINISH', color:'pastel2'}
+];
+
+/* ========= END CONFIG ========= */
+
+/* Build outer ring coordinates for 8x8 grid (indexes 0..19) */
+const gridN = 8;
+const ringCoords = [];
+// top row (left→right)
+for (let c=0;c<gridN;c++) ringCoords.push([0,c]);
+// right col (top→bottom) excluding top corner
+for (let r=1;r<gridN;r++) ringCoords.push([r,gridN-1]);
+// bottom row (right→left) excluding right corner
+for (let c=gridN-2;c>=0;c--) ringCoords.push([gridN-1,c]);
+// left col (bottom→top) excluding bottom & top corners
+for (let r=gridN-2;r>0;r--) ringCoords.push([r,0]);
+// ringCoords length is 28; we’ll map our 20 spaces spaced evenly around it
+const pickRingIdx = (i) => Math.round(i * (ringCoords.length-1) / (BOARD.length-1));
+
+/* DOM refs */
+const boardEl = document.getElementById('board');
+const diceEl = document.getElementById('dice');
+const restartBtn = document.getElementById('restart');
+const playersWrap = document.getElementById('players');
+const turnPill = document.getElementById('turnPill');
+const rollInfo = document.getElementById('rollInfo');
+const playerCountSel = document.getElementById('playerCount');
+const applyPlayersBtn = document.getElementById('applyPlayers');
+const modal = document.getElementById('modal');
+const modalContent = document.getElementById('modalContent');
+
+let players = [];
+let current = 0;
+let locked = false;
+
+/* Create tiles */
+const tileCenters = []; // pixel centers for token placement
+function buildBoard(){
+  // remove old tiles if any
+  [...boardEl.querySelectorAll('.tile')].forEach(n=>n.remove());
+  tileCenters.length = 0;
+
+  BOARD.forEach((tile, i)=>{
+    const idx = pickRingIdx(i);
+    const [r,c] = ringCoords[idx];
+    const cell = document.createElement('div');
+    cell.className = `tile ${tile.color||COLORS[i%COLORS.length]}`;
+    cell.style.gridRow = (r+1);
+    cell.style.gridColumn = (c+1);
+    cell.innerHTML = `
+      <div>
+        <div class="num">#${i}</div>
+        <small>${tile.label||''}</small>
+      </div>
+    `;
+    boardEl.appendChild(cell);
+
+    // compute approximate center in pixels after layout
+    // will recompute on resize as well
+  });
+
+  requestAnimationFrame(cacheCenters);
+}
+function cacheCenters(){
+  const rect = boardEl.getBoundingClientRect();
+  const cellW = rect.width / gridN;
+  const cellH = rect.height / gridN;
+  BOARD.forEach((_, i)=>{
+    const idx = pickRingIdx(i);
+    const [r,c] = ringCoords[idx];
+    const cx = rect.left + (c+0.5)*cellW;
+    const cy = rect.top + (r+0.5)*cellH;
+    tileCenters[i] = {x:cx, y:cy};
+  });
+  // position tokens if players exist
+  for(let i=0;i<players.length;i++) placeToken(i);
+}
+window.addEventListener('resize', cacheCenters);
+
+function newPlayers(count=5){
+  players = Array.from({length:count}, (_,i)=>({
+    id:i, pos:0, score:0, skip:0
+  }));
+  current = 0;
+  renderPlayers();
+  for (let i=0;i<5;i++){
+    const t = document.getElementById('t'+(i+1));
+    t.style.display = i<count ? 'block' : 'none';
+  }
+  cacheCenters();
+  updateTurnPill();
+}
+function renderPlayers(){
+  playersWrap.innerHTML = '';
+  players.forEach((p,i)=>{
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML = `
+      <div class="row" style="gap:8px">
+        <div class="token p${i+1}" style="position:static;width:16px;height:16px"></div>
+        <b>Player ${i+1}</b>
+      </div>
+      <div class="pill score">Pts: <span id="sc${i}">${p.score}</span> · Space <span id="sp${i}">${p.pos}</span></div>
+    `;
+    playersWrap.appendChild(row);
+  });
+}
+function updateTurnPill(){
+  turnPill.textContent = `Turn: Player ${current+1}`;
+}
+
+function placeToken(i){
+  const token = document.getElementById('t'+(i+1));
+  const {x,y} = tileCenters[players[i].pos] || tileCenters[0];
+  token.style.left = x+'px';
+  token.style.top  = y+'px';
+}
+
+/* Dice + movement */
+function roll(){
+  if (locked || players.length===0) return;
+  const p = players[current];
+  if (p.skip>0){
+    p.skip--; toast(`Player ${current+1} skips this turn.`);
+    nextTurn(); return;
+  }
+  locked = true;
+  const val = Math.floor(Math.random()*6)+1;
+  diceEl.textContent = val;
+  rollInfo.textContent = `Rolled ${val}`;
+
+  let steps = val;
+  const stepTimer = setInterval(()=>{
+    if (steps<=0){ clearInterval(stepTimer); landed(); return; }
+    p.pos = Math.min(p.pos+1, BOARD.length-1);
+    document.getElementById('sp'+current).textContent = p.pos;
+    placeToken(current);
+    steps--;
+  }, 280);
+}
+
+function landed(){
+  const tile = BOARD[players[current].pos];
+  if (!tile){ locked=false; nextTurn(); return; }
+
+  if (tile.type==='question'){
+    showQuestion(tile);
+  } else if (tile.type==='reaction'){
+    applyReaction(tile);
+  } else if (tile.type==='finish'){
+    toast(`🎉 Player ${current+1} reached FINISH!`);
+    locked=false;
+  } else {
+    locked=false; nextTurn();
+  }
+}
+
+function deltaScore(i, n){
+  players[i].score += n;
+  document.getElementById('sc'+i).textContent = players[i].score;
+}
+
+/* Modals */
+function openModal(html){ modalContent.innerHTML = html; modal.classList.add('show'); }
+function closeModal(){ modal.classList.remove('show'); }
+
+/* Question flow */
+function showQuestion(tile){
+  const letters = ['A','B','C','D'];
+  const opts = tile.choices.map((t,idx)=>(
+    `<button class="optBtn" data-k="${letters[idx]}"><b>${letters[idx]}.</b> ${t}</button>`
+  )).join('');
+  openModal(`
+    <h2>Question</h2>
+    <div>${tile.q}</div>
+    <div class="options" style="margin-top:12px">${opts}</div>
+    <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn alt" id="giveUp">Give up</button>
+    </div>
+  `);
+  modal.querySelectorAll('.optBtn').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      const pick = e.currentTarget.getAttribute('data-k');
+      const correct = tile.answer;
+      if (pick===correct){
+        deltaScore(current, (tile.points?.correct ?? 2));
+        openModal(`<div class="banner good">✅ Correct! +${tile.points?.correct ?? 2} points</div>
+          <div style="text-align:right;margin-top:10px"><button class="btn" id="ok">Continue</button></div>`);
+      } else {
+        deltaScore(current, (tile.points?.wrong ?? -1));
+        openModal(`<div class="banner bad">❌ Wrong. ${tile.points?.wrong ?? -1} point</div>
+          <div style="text-align:right;margin-top:10px"><button class="btn" id="ok">Continue</button></div>`);
+      }
+      modal.querySelector('#ok').addEventListener('click', ()=>{ closeModal(); locked=false; nextTurn(); });
+    });
+  });
+  const give = modal.querySelector('#giveUp');
+  give.addEventListener('click', ()=>{ closeModal(); locked=false; nextTurn(); });
+}
+
+/* Reactions */
+function applyReaction(tile){
+  // teacher-judged prompts get Yes/No
+  if (tile.teacher){
+    openModal(`
+      <h2>Reaction</h2>
+      <div>${tile.text}</div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+        <button class="btn alt" id="nope">Mark Wrong (-1)</button>
+        <button class="btn" id="yep">Mark Correct (+2)</button>
+      </div>
+    `);
+    modal.querySelector('#yep').addEventListener('click', ()=>{
+      deltaScore(current, 2); closeModal(); locked=false; nextTurn();
+    });
+    modal.querySelector('#nope').addEventListener('click', ()=>{
+      deltaScore(current, -1); closeModal(); locked=false; nextTurn();
+    });
+    return;
+  }
+
+  // auto effects
+  let msg = tile.text || 'Event';
+  const eff = tile.effect || {};
+  if (eff.points) { deltaScore(current, eff.points); msg += ` ${eff.points>0?`(+${eff.points} pts)`: `(${eff.points} pts)`}`; }
+  if (eff.move){
+    const target = Math.min(players[current].pos + eff.move, BOARD.length-1);
+    players[current].pos = target;
+    document.getElementById('sp'+current).textContent = target;
+    placeToken(current);
+    msg += ` (moved ${eff.move>0?`+${eff.move}`:eff.move} spaces)`;
+  }
+  if (eff.skip){ players[current].skip += eff.skip; msg += ` (skip next ${eff.skip} turn${eff.skip>1?'s':''})`; }
+
+  openModal(`
+    <h2>Reaction</h2>
+    <div>${msg}</div>
+    <div style="text-align:right;margin-top:10px"><button class="btn" id="ok">Continue</button></div>
+  `);
+  modal.querySelector('#ok').addEventListener('click', ()=>{ closeModal(); locked=false; nextTurn(); });
+}
+
+/* Helpers */
+function toast(text){
+  openModal(`<div class="banner" style="background:#111;color:#fff">${text}</div>
+  <div style="text-align:right;margin-top:10px"><button class="btn" id="ok">OK</button></div>`);
+  modal.querySelector('#ok').addEventListener('click', ()=>{ closeModal(); });
+}
+function nextTurn(){
+  current = (current+1) % players.length;
+  updateTurnPill();
+}
+
+/* Wire up */
+diceEl.addEventListener('click', roll);
+restartBtn.addEventListener('click', ()=>{
+  newPlayers(Number(playerCountSel.value||5));
+  players.forEach((_,i)=>placeToken(i));
+  rollInfo.textContent = 'Roll to start';
+});
+applyPlayersBtn.addEventListener('click', ()=>{
+  newPlayers(Number(playerCountSel.value||5));
+  players.forEach((_,i)=>placeToken(i));
+});
+modal.addEventListener('click', (e)=>{ if (e.target===modal) closeModal(); });
+
+/* Boot */
+buildBoard();
+newPlayers(5);
+players.forEach((_,i)=>placeToken(i));
+</script>
+</body>
+</html>

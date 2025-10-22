@@ -377,15 +377,21 @@ diceEl.addEventListener('click', ()=>{
   rollChip.textContent = `Rolled ${roll}`;
 
   let steps = roll;
-  const step = ()=>{
-    if (steps<=0 || p.pos>=FINISH_INDEX){ landed(); return; }
-    p.pos = Math.min(p.pos+1, FINISH_INDEX);
-    document.getElementById('sp'+current).textContent = p.pos;
-    placeToken(p, p.pos, tokenNudge(current));
-    steps--;
-    setTimeout(step, 230);
-  };
-  step();
+const step = () => {
+  if (steps <= 0) { landed(); return; }
+
+  p.pos = Math.min(p.pos + 1, FINISH_INDEX);
+  document.getElementById('sp' + current).textContent = p.pos;
+  placeToken(p, p.pos, tokenNudge(current));
+  steps--;
+
+  if (steps === 0 || p.pos === FINISH_INDEX) {
+    setTimeout(landed, 250);  // small delay for visual stop
+  } else {
+    setTimeout(step, 250);
+  }
+};
+step();
 });
 
 function landed(){

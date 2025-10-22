@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Chemistry Board Game – The George Way</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Chemistry Board Game – Periodic Trends Edition</title>
 <style>
   :root{ --ink:#111; --good:#2ecc71; --bad:#e74c3c; --panel:#ffffffcc; }
   *{ box-sizing:border-box }
@@ -40,12 +40,9 @@
   .pips{
     width:70%; height:70%; display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(3,1fr); gap:6%;
   }
-  .pip{
-    width:100%; height:100%; display:flex; align-items:center; justify-content:center;
-  }
+  .pip{ display:flex; align-items:center; justify-content:center; }
   .pip::before{ content:""; width:18px; height:18px; border-radius:50%; background:#fff; }
   .hidden{ visibility:hidden }
-
   .roll-hint{ position:absolute; left:50%; top:56%; transform:translateX(-50%); font-size:14px; background:#ffffffcc; padding:4px 10px; border-radius:999px; z-index:6 }
 
   /* HUD */
@@ -60,7 +57,7 @@
   /* Modal */
   .modal{ position:fixed; inset:0; background:#00000066; display:none; align-items:center; justify-content:center; z-index:50; padding:18px }
   .modal.show{ display:flex }
-  .dialog{ background:#fff; width:min(720px,95vw); border-radius:16px; border:2px solid #00000020; padding:18px }
+  .dialog{ background:#fff; width:min(760px,95vw); border-radius:16px; border:2px solid #00000020; padding:18px }
   .dialog h2{ margin:0 0 8px }
   .options{ display:grid; gap:10px; margin-top:10px }
   .optBtn{ border:2px solid #00000020; border-radius:12px; background:#fff; padding:12px; text-align:left; font-weight:700; cursor:pointer }
@@ -74,10 +71,9 @@
 <div class="board-wrap" id="board">
   <div class="board-bg" aria-hidden="true"></div>
 
-  <!-- Center Dice Init -->
+  <!-- Center Dice -->
   <div id="dice" class="dice" title="Roll">
     <div class="pips" id="pips">
-   
       <div class="pip" data-pos="1"></div>
       <div class="pip" data-pos="2"></div>
       <div class="pip" data-pos="3"></div>
@@ -89,7 +85,7 @@
       <div class="pip" data-pos="9"></div>
     </div>
   </div>
-  <div class="roll-hint" id="rollHint">Tap dice to roll</div>
+  <div class="roll-hint" id="rollHint">Tap the dice to roll</div>
 
   <!-- Tokens -->
   <div id="t1" class="token p1"></div>
@@ -124,82 +120,168 @@
 <div id="modal" class="modal"><div class="dialog"><div id="modalContent"></div></div></div>
 
 <script>
-/* ===========================================================
-   BOARD LAYOUT & QUESTIONS
-   Path order (21 spaces total):
+/* =========================================================================
+   1) BOARD LAYOUT
+   Path order (24 total tiles):
    0 START (bottom-left) ->
-   1..5 go UP the left side ->
-   6..10 go RIGHT across the top ->
-   11..15 go DOWN right side ->
-   16..20 go LEFT across the bottom ->
-   20 is FINISH (tile before START).
-=========================================================== */
+   1..4 go UP the left side (4 spaces) ->
+   5..12 go RIGHT across the top (8 spaces) ->
+   13..16 go DOWN right side (4 spaces) ->
+   17..23 go LEFT across the bottom (7 spaces) ->
+   23 is FINISH (tile before START).
+========================================================================= */
+function buildPath(){
+  const P=[];
+  // 0: start near bottom-left
+  P.push({x:16, y:92});                     // 0 START
+  // Up 4
+  P.push({x:16, y:78});                     // 1
+  P.push({x:16, y:64});                     // 2
+  P.push({x:16, y:50});                     // 3
+  P.push({x:16, y:36});                     // 4
+  // Right across top (8) at y=10
+  P.push({x:24, y:10});                     // 5
+  P.push({x:34, y:10});                     // 6
+  P.push({x:44, y:10});                     // 7
+  P.push({x:54, y:10});                     // 8
+  P.push({x:64, y:10});                     // 9
+  P.push({x:74, y:10});                     //10
+  P.push({x:84, y:10});                     //11
+  P.push({x:92, y:10});                     //12
+  // Down right side (4)
+  P.push({x:92, y:26});                     //13
+  P.push({x:92, y:42});                     //14
+  P.push({x:92, y:58});                     //15
+  P.push({x:92, y:74});                     //16
+  // Left bottom (7) at y=92
+  P.push({x:82, y:92});                     //17
+  P.push({x:72, y:92});                     //18
+  P.push({x:62, y:92});                     //19
+  P.push({x:52, y:92});                     //20
+  P.push({x:42, y:92});                     //21
+  P.push({x:32, y:92});                     //22
+  P.push({x:24, y:92});                     //23 FINISH
+  return P;
+}
+const PATH = buildPath();
+const START_INDEX = 0;
+const FINISH_INDEX = PATH.length-1; // 23
 
-// NOT FINISHED NEED TO UPDATE
-const BOARD = [
-  {type:'start', label:'START'},                                     // 0
-  {type:'reaction', text:'Event (1) – You put mentos in coke (Big Mistake)', effect:{points:-2}},         // 1
-  {type:'reaction', text:'Event (2) – +1 point.', effect:{points:+1}},// 2
-  {type:'question', q:'Pure water has pH 7. It is:', choices:['Acidic','Basic','Neutral','Corrosive'], answer:'C', points:{correct:2, wrong:-1}}, // 3
-  {type:'reaction', text:'Give a sentence with “usually.”', teacher:true}, // 4
-  {type:'reaction', text:'Jail Time — lose next turn.', effect:{skip:1}},   // 5
-  {type:'question', q:'Which bond shares electrons?', choices:['Ionic','Hydrogen','Covalent','Metallic'], answer:'C', points:{correct:2, wrong:-1}}, // 6
-  {type:'reaction', text:'Catalyst speeds reaction — move +2.', effect:{move:+2}}, // 7
-  {type:'reaction', text:'Element found in meteorite — +5 pts.', effect:{points:+5}}, // 8
-  {type:'reaction', text:'Fake element reported — -2 pts.', effect:{points:-2}}, // 9
-  {type:'reaction', text:'Say a negative sentence about food.', teacher:true}, // 10
-  {type:'reaction', text:'Lucky step — +1 pt.', effect:{points:+1}}, // 11
-  {type:'question', q:'Which unit measures mass?', choices:['Liter','Celsius','Gram','Meter'], answer:'C', points:{correct:2, wrong:-1}}, // 12
-  {type:'reaction', text:'Phosphorus reacts with oxygen — move +1.', effect:{move:+1}}, // 13
-  {type:'reaction', text:'Stable reaction — nothing happens.'}, // 14
-  {type:'reaction', text:'Volatile reaction — -1 pt.', effect:{points:-1}}, // 15
-  {type:'reaction', text:'Correct! +2 pts.', effect:{points:+2}}, // 16
-  {type:'reaction', text:'Wrong! -1 pt.', effect:{points:-1}}, // 17
-  {type:'reaction', text:'All point taken — +3 pts.', effect:{points:+3}}, // 18
-  {type:'question', q:'Complete combustion of a hydrocarbon produces:', choices:['O2 & sugar','CO2 & H2O','Methane & heat','CO & ash'], answer:'B', points:{correct:2, wrong:-1}}, // 19
-  {type:'finish', label:'FINISH'}                                   // 20
+/* Tile types along the loop:
+   Q = question (random from bank)
+   E = event (random from bank)
+   . = neutral
+*/
+const TILE_TYPES = [
+  'S', 'E','Q','E','.',  // 0..4  (up)
+  'Q','E','Q','E','Q','E','Q','E',  // 5..12 (top)
+  'Q','E','Q','E',      // 13..16 (down)
+  'E','Q','E','Q','E','Q','F' // 17..23 (bottom to finish)
 ];
 
-/* Pathing*/
-function buildPath(){
-  const path = [];
-  // Start (bottom-left corner area)
-  path.push({x:16, y:92});                                 // 0 START
+/* =========================================================================
+   2) QUESTION BANK (Periodic table, 40+ randomized items)
+   - Each Q has: q, choices[4], answer ('A'..'D'), ptsCorrect, ptsWrong, moveBack
+========================================================================= */
+const QUESTIONS_BASE = [
+  // Families & general
+  {q:"Which group contains the alkali metals?", c:["Group 1","Group 2","Group 17","Group 18"], a:"A"},
+  {q:"Which group contains the alkaline earth metals?", c:["1","2","16","17"], a:"B"},
+  {q:"Which group contains the halogens?", c:["15","16","17","18"], a:"C"},
+  {q:"Which group contains the noble gases?", c:["16","17","18","1"], a:"C"},
+  // Trends (AR, IE, EN, metallic)
+  {q:"Across a period, atomic radius generally…", c:["increases","decreases","stays the same","doubles"], a:"B"},
+  {q:"Down a group, atomic radius generally…", c:["increases","decreases","stays the same","is unpredictable"], a:"A"},
+  {q:"Across a period, ionization energy generally…", c:["decreases","increases","stays same","depends on mass"], a:"B"},
+  {q:"Down a group, ionization energy generally…", c:["increases","decreases","no trend","oscillates"], a:"B"},
+  {q:"Across a period, electronegativity generally…", c:["decreases","increases","random","no trend"], a:"B"},
+  {q:"Down a group, electronegativity generally…", c:["increases","decreases","random","no trend"], a:"B"},
+  {q:"Metallic character increases when moving…", c:["across a period (→)","up a group","down a group","toward the noble gases"], a:"C"},
+  // Element facts (at least 28 unique elements referenced)
+  {q:"Atomic number of Hydrogen (H)?", c:["1","2","3","4"], a:"A"},
+  {q:"Atomic number of Helium (He)?", c:["8","10","2","18"], a:"C"},
+  {q:"Atomic number of Lithium (Li)?", c:["3","11","19","12"], a:"A"},
+  {q:"Sodium’s symbol is…", c:["S","Na","So","Sd"], a:"B"},
+  {q:"Potassium’s symbol is…", c:["P","Po","K","Pt"], a:"C"},
+  {q:"Calcium’s symbol is…", c:["Ca","Cl","Cs","C"], a:"A"},
+  {q:"Magnesium’s symbol is…", c:["Mn","Mg","Ma","M"], a:"B"},
+  {q:"Aluminum is in which group?", c:["1","13","16","18"], a:"B"},
+  {q:"Carbon makes how many common covalent bonds?", c:["1","2","3","4"], a:"D"},
+  {q:"Nitrogen’s symbol is…", c:["Ni","Na","N","Nt"], a:"C"},
+  {q:"Oxygen’s group is best described as…", c:["alkali metal","noble gas","halogen","chalcogen"], a:"D"},
+  {q:"Fluorine is highly…", c:["metallic","electronegative","noble","radioactive only"], a:"B"},
+  {q:"Neon is…", c:["a halogen","a noble gas","an alkali metal","a metalloid"], a:"B"},
+  {q:"Silicon (Si) is classified as a…", c:["metal","nonmetal","metalloid","noble gas"], a:"C"},
+  {q:"Phosphorus commonly forms how many covalent bonds?", c:["3","5","4","1"], a:"C"},
+  {q:"Chlorine belongs to which family?", c:["noble gases","alkaline earth metals","halogens","actinides"], a:"C"},
+  {q:"Argon is mostly…", c:["reactive","inert","explosive","radioactive"], a:"B"},
+  {q:"Iron’s symbol is…", c:["Ir","Fe","In","Fr"], a:"B"},
+  {q:"Copper’s symbol is…", c:["Co","Cu","Cr","Cp"], a:"B"},
+  {q:"Zinc’s symbol is…", c:["Z","Zn","Zi","Zc"], a:"B"},
+  {q:"Bromine (Br) at room temperature is…", c:["solid","liquid","gas","plasma"], a:"B"},
+  {q:"Iodine (I) belongs to…", c:["halogens","alkali metals","noble gases","alkaline earth metals"], a:"A"},
+  {q:"Cesium (Cs) is a very reactive…", c:["alkali metal","noble gas","halogen","metalloid"], a:"A"},
+  {q:"Barium (Ba) belongs to…", c:["alkaline earth metals","halogens","lanthanides","noble gases"], a:"A"},
+  {q:"Gold’s symbol is…", c:["Ag","Au","Gd","Go"], a:"B"},
+  {q:"Mercury (Hg) at room temperature is a…", c:["solid metal","liquid metal","gas","nonmetal"], a:"B"},
+  {q:"Lead’s symbol is…", c:["Ld","Pb","Pl","Le"], a:"B"},
+  {q:"Uranium’s symbol is…", c:["Ur","U","Un","Um"], a:"B"},
+  // bonding & compounds / periodic logic
+  {q:"Which pair will most likely form an ionic compound?", c:["Na & Cl","C & O","H & H","N & O"], a:"A"},
+  {q:"Which element has the highest EN in its period?", c:["Na","Al","Si","Cl"], a:"D"},
+  {q:"Which element is more metallic?", c:["Mg or Cl?","C or Na?","F or Li?","Si or Al?"], a:"B"}, // interpret as “C or Na?” -> Na
+  {q:"Which atom is largest in radius?", c:["Li","C","F","Ne"], a:"A"},
+  {q:"Which atom is smallest in radius?", c:["K","Ca","Ar","Cl"], a:"D"},
+  {q:"Which has the highest first ionization energy?", c:["Mg","Al","Si","P"], a:"D"},
+  {q:"Noble gases are mostly unreactive because…", c:["full valence shell","low mass","invisible","liquids"], a:"A"},
+  {q:"Which element is a halogen with atomic number 17?", c:["F","Cl","Br","I"], a:"B"},
+  {q:"Which is a metalloid?", c:["B","O","Ca","Kr"], a:"A"},
+  {q:"Which element commonly forms +2 ions?", c:["Mg","Al","Na","Cl"], a:"A"},
+  {q:"Which has the lowest electronegativity?", c:["Cs","H","O","F"], a:"A"},
+  {q:"Which is NOT a transition metal?", c:["Fe","Cu","Zn","Si"], a:"D"},
+  {q:"Which pair will most likely form a covalent bond?", c:["K & Br","Na & Cl","C & H","Mg & O"], a:"C"},
+  {q:"Which element is in Period 3, Group 16?", c:["S","Se","O","Te"], a:"A"},
+  {q:"Which element has the configuration [Ne]3s¹?", c:["Na","Mg","Al","Si"], a:"A"},
+];
+// enrich scoring effects per question (all visible)
+const QUESTIONS_BANK = QUESTIONS_BASE.map(q=>({
+  ...q,
+  ptsCorrect: 2,
+  ptsWrong: -1,
+  moveBackOnWrong: 1
+}));
 
-  // Up the left side (1..5)
-  path.push({x:16, y:77});  // 1
-  path.push({x:16, y:62});  // 2
-  path.push({x:16, y:47});  // 3
-  path.push({x:16, y:32});  // 4
-  path.push({x:16, y:17});  // 5 (top-left)
+/* =========================================================================
+   3) EVENT CARD BANK (reactions/compounds; positives & negatives)
+   - Each event has text and any of: points, move, skip (+ adds, − removes)
+========================================================================= */
+const EVENTS_BANK = [
+  {text:"Sodium reacts violently with water! Lose 2 points.", points:-2},
+  {text:"Helium is super stable — collect 3 points.", points:+3},
+  {text:"Fluorine steals an electron — move another player back 1 (choose).", chooseTargetBack:1},
+  {text:"Catalyst speeds reaction — move ahead 2 spaces.", move:+2},
+  {text:"Precipitation reaction succeeds — +2 points.", points:+2},
+  {text:"Endothermic step absorbs heat — lose 1 point.", points:-1},
+  {text:"Redox bonus: Cu²⁺ reduced to Cu — +3 points.", points:+3},
+  {text:"Corrosion setback: Fe → Fe²⁺ — move back 1.", move:-1},
+  {text:"Lab accident: spill! Skip next turn.", skip:+1},
+  {text:"Noble gas detour: you do nothing. (Stable!)"},
+  {text:"Combustion complete — CO₂ + H₂O formed. Move ahead 1.", move:+1},
+  {text:"Le Châtelier pushback — system shifts left. Move back 2.", move:-2},
+  {text:"Ionic lattice formed (NaCl) — +2 points.", points:+2},
+  {text:"Electronegativity win — take 1 point from a player (choose).", steal:1},
+  {text:"Alloy crafted (brass) — +1 point and move ahead 1.", points:+1, move:+1},
+  {text:"Acid–base neutralization — +2 points.", points:+2},
+  {text:"Gas escapes! Lose a point.", points:-1},
+  {text:"Jail time (safety review) — lose next turn.", skip:+1},
+  {text:"Peer review success — remove 1 skip if you have any.", skip:-1},
+  {text:"Photon boost — +1 point; photoelectric kick you forward 1.", points:+1, move:+1},
+];
 
-  // Across the top, left->right (6..10)
-  path.push({x:23, y:8});  // 6
-  path.push({x:38, y:8});  // 7
-  path.push({x:53, y:8});  // 8
-  path.push({x:68, y:8});  // 9
-  path.push({x:83, y:8});  // 10 (top-right)
-
-  // Down the right side (11..15)
-  path.push({x:92, y:23}); // 11
-  path.push({x:92, y:38}); // 12
-  path.push({x:92, y:53}); // 13
-  path.push({x:92, y:68}); // 14
-  path.push({x:92, y:83}); // 15 (bottom-right)
-
-  // Across the bottom, right->left (16..20)
-  path.push({x:77, y:92}); // 16
-  path.push({x:62, y:92}); // 17
-  path.push({x:47, y:92}); // 18
-  path.push({x:32, y:92}); // 19
-  path.push({x:23, y:92}); // 20 FINISH (tile before START)
-  return path;
-}
-const PATH = buildPath(); // length = 21 (0..20)
-
-/* Player Names (aka the idiots */
+/* =========================================================================
+   4) GAME STATE & UI
+========================================================================= */
 const NAMES_DEFAULT = ["George","Angie","Kobe","Walter","Alexander"];
-
 
 const boardEl = document.getElementById('board');
 const diceEl  = document.getElementById('dice');
@@ -211,35 +293,50 @@ const rollChip  = document.getElementById('rollChip');
 document.getElementById('apply').onclick = ()=> boot(Number(document.getElementById('playerCount').value||5));
 document.getElementById('reset').onclick = ()=> boot(Number(document.getElementById('playerCount').value||5));
 
-/* States */
 let players = [];  
 let current = 0;
 let locked  = false;
+let Q_STACK = [];
+let E_STACK = [];
+
+function shuffle(arr){
+  const a=arr.slice();
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+function refillStacks(){
+  if(Q_STACK.length===0) Q_STACK = shuffle(QUESTIONS_BANK);
+  if(E_STACK.length===0) E_STACK = shuffle(EVENTS_BANK);
+}
 
 function boot(n=5){
-  // Init the players (aka idiots :P
+  refillStacks();
   players = Array.from({length:n}, (_,i)=>({
     name: NAMES_DEFAULT[i] || `Player ${i+1}`,
-    pos: 0, score: 0, skip: 0, done: false,
+    pos: START_INDEX, score: 0, skip: 0, done: false,
     token: document.getElementById('t'+(i+1))
   }));
-  // hide extra tokens if <5
   for(let i=0;i<5;i++){
     const t = document.getElementById('t'+(i+1));
     t.style.display = i<n ? 'block' : 'none';
   }
-  // place tokens side-by-side at START (NOT WORKING :(
-  players.forEach((p,i)=> placeToken(p, 0, startNudge(i)) );
-  // UI
+  players.forEach((p,i)=> placeToken(p, START_INDEX, startNudge(i)) );
   renderScores(); current = 0; updateTurn(); rollChip.textContent = 'Roll to start';
   locked=false; rollHint.style.display='';
+  showPips(1);
 }
 
-function startNudge(i){ // spread horizontally at start
+function startNudge(i){ // spread at start
   return [{dx:-10,dy:-8},{dx:+10,dy:-8},{dx:-10,dy:+8},{dx:+10,dy:+8},{dx:0,dy:0}][i%5];
 }
-function tokenNudge(i){ // small spread everywhere else
+function tokenNudge(i){ // small spread elsewhere
   return [{dx:-6,dy:-6},{dx:+6,dy:-6},{dx:+6,dy:+6},{dx:-6,dy:+6},{dx:0,dy:0}][i%5];
+}
+function placeToken(player, idx, nudge={dx:0,dy:0}){
+  const {x,y} = PATH[idx];
+  player.token.style.left = `${x}%`;
+  player.token.style.top  = `${y}%`;
+  player.token.style.transform = `translate(-50%,-50%) translate(${nudge.dx}px,${nudge.dy}px)`;
 }
 
 function renderScores(){
@@ -254,22 +351,8 @@ function renderScores(){
 }
 function updateTurn(){ turnChip.textContent = `Turn: ${players[current].name}`; }
 
-function placeToken(player, idx, nudge={dx:0,dy:0}){
-  const {x,y} = PATH[idx];
-  player.token.style.left = `${x}%`;
-  player.token.style.top  = `${y}%`;
-  player.token.style.transform = `translate(-50%,-50%) translate(${nudge.dx}px,${nudge.dy}px)`;
-}
-
-/* Dice Pips :) */
-const pipsMap = {
-  1:[5],
-  2:[1,9],
-  3:[1,5,9],
-  4:[1,3,7,9],
-  5:[1,3,5,7,9],
-  6:[1,3,4,6,7,9]
-};
+/* Dice pips */
+const pipsMap = {1:[5],2:[1,9],3:[1,5,9],4:[1,3,7,9],5:[1,3,5,7,9],6:[1,3,4,6,7,9]};
 function showPips(n){
   const cells = pipsEl.querySelectorAll('.pip');
   cells.forEach(c=>c.classList.add('hidden'));
@@ -279,11 +362,10 @@ function showPips(n){
   });
 }
 
-/* Movement and Turning logic */
+/* Rolling / movement */
 diceEl.addEventListener('click', ()=>{
   if (locked) return;
-  // find a player who isn't done (always rolls)
-  if (players.filter(p=>!p.done).length===0) return; // game already finished (all done)
+  if (players.filter(p=>!p.done).length===0) return; // all finished
   if (players[current].done) { nextTurn(); return; }
 
   const p = players[current];
@@ -291,41 +373,33 @@ diceEl.addEventListener('click', ()=>{
 
   locked = true; rollHint.style.display='none';
 
-  // roll 1..6
   const roll = Math.floor(Math.random()*6)+1;
   showPips(roll);
   rollChip.textContent = `Rolled ${roll}`;
 
-  
   let steps = roll;
   const step = ()=>{
-    if (steps<=0 || p.pos>=20){ // reached FINISH already or out of steps
-      landed(); return;
-    }
-    p.pos = Math.min(p.pos+1, 20);
+    if (steps<=0 || p.pos>=FINISH_INDEX){ landed(); return; }
+    p.pos = Math.min(p.pos+1, FINISH_INDEX);
     document.getElementById('sp'+current).textContent = p.pos;
     placeToken(p, p.pos, tokenNudge(current));
     steps--;
-    setTimeout(step, 250);
+    setTimeout(step, 230);
   };
   step();
 });
 
 function landed(){
   const p = players[current];
-  const tile = BOARD[p.pos];
+  const idx = p.pos;
 
-  if (p.pos===20 && !p.done){ // FINISH
+  if (idx===FINISH_INDEX && !p.done){
     deltaScore(current, +3);
     p.done = true;
     document.getElementById('chip'+current).innerHTML =
       `<b>${p.name}</b>: <span id="sc${current}">${p.score}</span> pts · Space <span id="sp${current}">${p.pos}</span> · ✅ Finished`;
     toast(`🎉 ${p.name} reached FINISH! (+3 pts)`);
-  }
-
-  if (p.done){
     locked=false;
-    // if everyone finished, announce winner
     if (players.every(pp=>pp.done)){
       const max = Math.max(...players.map(pp=>pp.score));
       const winners = players.filter(pp=>pp.score===max).map(pp=>pp.name);
@@ -334,12 +408,13 @@ function landed(){
         <div style="text-align:right;margin-top:12px"><button class="btn" id="ok">OK</button></div>`);
       modal.querySelector('#ok').addEventListener('click',()=>closeModal());
     }
-    nextTurn(); return;
+    nextTurn(); 
+    return;
   }
 
-  if (!tile){ locked=false; nextTurn(); return; }
-  if (tile.type==='question'){ showQuestion(tile); return; }
-  if (tile.type==='reaction'){ applyReaction(tile); return; }
+  const type = TILE_TYPES[idx];
+  if(type==='Q'){ askRandomQuestion(); return; }
+  if(type==='E'){ runRandomEvent(); return; }
   locked=false; nextTurn();
 }
 
@@ -348,8 +423,14 @@ function deltaScore(i, n){
   document.getElementById('sc'+i).textContent = players[i].score;
 }
 
+function movePlayer(i, delta){
+  const p=players[i];
+  p.pos = Math.max(START_INDEX, Math.min(FINISH_INDEX, p.pos + delta));
+  document.getElementById('sp'+i).textContent = p.pos;
+  placeToken(p, p.pos, tokenNudge(i));
+}
+
 function nextTurn(){
-  // advance to next non-finished player
   let tries=0;
   do{
     current = (current+1) % players.length;
@@ -359,7 +440,9 @@ function nextTurn(){
   updateTurn();
 }
 
-/* Helpers  */
+/* =========================================================================
+   5) QUESTIONS & EVENTS (modals)
+========================================================================= */
 const modal=document.getElementById('modal');
 const modalContent=document.getElementById('modalContent');
 function openModal(html){ modalContent.innerHTML=html; modal.classList.add('show'); }
@@ -372,67 +455,84 @@ function toast(text){
   modal.querySelector('#ok').addEventListener('click',()=>closeModal());
 }
 
-function showQuestion(tile){
+function askRandomQuestion(){
+  refillStacks();
+  const tileQ = Q_STACK.pop(); // draw
   const letters=['A','B','C','D'];
-  const opts = tile.choices.map((t,idx)=>`<button class="optBtn" data-k="${letters[idx]}"><b>${letters[idx]}.</b> ${t}</button>`).join('');
-  openModal(`<h2>Question</h2><div style="font-size:18px">${tile.q}</div><div class="options">${opts}</div>`);
+  const opts = tileQ.c.map((t,idx)=>`<button class="optBtn" data-k="${letters[idx]}"><b>${letters[idx]}.</b> ${t}</button>`).join('');
+  openModal(`<h2>Question</h2><div style="font-size:18px">${tileQ.q}</div><div class="options">${opts}</div>`);
   modal.querySelectorAll('.optBtn').forEach(btn=>{
     btn.addEventListener('click',e=>{
       const k = e.currentTarget.getAttribute('data-k');
-      const correct = tile.answer;
-      if (k===correct){
-        const gain = tile.points?.correct ?? 2;
-        deltaScore(current, gain);
-        openModal(`<div class="banner good">✅ Correct! +${gain} pts</div>
+      if (k===tileQ.a){
+        deltaScore(current, tileQ.ptsCorrect);
+        openModal(`<div class="banner good">✅ Correct! +${tileQ.ptsCorrect} pts</div>
           <div style="text-align:right;margin-top:10px"><button class="btn" id="go">Continue</button></div>`);
+        modal.querySelector('#go').addEventListener('click', ()=>{ closeModal(); locked=false; nextTurn(); });
       }else{
-        const loss = tile.points?.wrong ?? -1;
-        deltaScore(current, loss);
-        openModal(`<div class="banner bad">❌ Wrong. ${loss} pt</div>
+        deltaScore(current, tileQ.ptsWrong);
+        if (tileQ.moveBackOnWrong) movePlayer(current, -tileQ.moveBackOnWrong);
+        openModal(`<div class="banner bad">❌ Wrong. ${tileQ.ptsWrong} pt; moved back ${tileQ.moveBackOnWrong}.</div>
           <div style="text-align:right;margin-top:10px"><button class="btn" id="go">Continue</button></div>`);
+        modal.querySelector('#go').addEventListener('click', ()=>{ closeModal(); locked=false; nextTurn(); });
       }
-      modal.querySelector('#go').addEventListener('click', ()=>{ closeModal(); locked=false; nextTurn(); });
     });
   });
 }
 
-function applyReaction(tile){
-  if (tile.teacher){
-    openModal(`<h2>Reaction</h2><div style="font-size:18px">${tile.text}</div>
-      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
-        <button class="btn alt" id="no">Mark Wrong (−1)</button>
-        <button class="btn" id="yes">Mark Correct (+2)</button>
-      </div>`);
-    modal.querySelector('#yes').addEventListener('click',()=>{ deltaScore(current,+2); closeModal(); locked=false; nextTurn(); });
-    modal.querySelector('#no').addEventListener('click',()=>{ deltaScore(current,-1); closeModal(); locked=false; nextTurn(); });
+function chooseTarget(callback){
+  const others = players.map((p,i)=>({p,i})).filter(o=>o.i!==current);
+  const buttons = others.map(o=>`<button class="btn alt" data-i="${o.i}">${o.p.name}</button>`).join(' ');
+  openModal(`<h2>Choose a player</h2><div class="row">${buttons}</div>`);
+  modal.querySelectorAll('button[data-i]').forEach(b=>{
+    b.addEventListener('click',()=>{ const i=Number(b.getAttribute('data-i')); closeModal(); callback(i); });
+  });
+}
+
+function runRandomEvent(){
+  refillStacks();
+  const ev = E_STACK.pop();
+
+  // events that require choosing target
+  if (ev.chooseTargetBack){
+    chooseTarget((i)=>{
+      movePlayer(i, -ev.chooseTargetBack);
+      openModal(`<div class="banner">Moved ${players[i].name} back ${ev.chooseTargetBack}.</div>
+        <div style="text-align:right;margin-top:10px"><button class="btn" id="ok">OK</button></div>`);
+      modal.querySelector('#ok').addEventListener('click',()=>{ closeModal(); locked=false; nextTurn(); });
+    });
+    return;
+  }
+  if (ev.steal){
+    chooseTarget((i)=>{
+      const s = Math.min(ev.steal, players[i].score);
+      players[i].score -= s; document.getElementById('sc'+i).textContent = players[i].score;
+      deltaScore(current, s);
+      openModal(`<div class="banner">Stole ${s} point${s===1?'':'s'} from ${players[i].name}.</div>
+        <div style="text-align:right;margin-top:10px"><button class="btn" id="ok">OK</button></div>`);
+      modal.querySelector('#ok').addEventListener('click',()=>{ closeModal(); locked=false; nextTurn(); });
+    });
     return;
   }
 
-  let msg = tile.text || 'Event';
-  const eff = tile.effect || {};
-  if (eff.points){ deltaScore(current, eff.points); msg += ` (${eff.points>0?'+':''}${eff.points} pts)`; }
-  if (eff.move){
-    const p = players[current];
-    p.pos = Math.min(p.pos + eff.move, 20);
-    document.getElementById('sp'+current).textContent = p.pos;
-    placeToken(p, p.pos, tokenNudge(current));
-    msg += ` (moved ${eff.move>0?'+':''}${eff.move})`;
-  }
-  if (eff.skip){ players[current].skip = Math.max(0, players[current].skip + eff.skip); msg += eff.skip>0?` (skip next ${eff.skip})`:` (skip removed)`; }
+  // plain effects
+  if (ev.points) deltaScore(current, ev.points);
+  if (ev.move) movePlayer(current, ev.move);
+  if (ev.skip) players[current].skip = Math.max(0, players[current].skip + ev.skip);
 
-  openModal(`<h2>Reaction</h2><div style="font-size:18px">${msg}</div>
+  openModal(`<h2>Event</h2><div style="font-size:18px">${ev.text || 'Event'}</div>
     <div style="text-align:right;margin-top:10px"><button class="btn" id="ok">Continue</button></div>`);
   modal.querySelector('#ok').addEventListener('click', ()=>{ closeModal(); locked=false; nextTurn(); });
 }
 
-/* Keep tokens aligned */
-window.addEventListener('resize', ()=> players.forEach((p,i)=> placeToken(p,p.pos, p.pos===0?startNudge(i):tokenNudge(i)) ) );
+/* Keep tokens aligned on resize */
+window.addEventListener('resize', ()=> players.forEach((p,i)=> placeToken(p,p.pos, p.pos===START_INDEX?startNudge(i):tokenNudge(i)) ) );
 
-/* Final Initialization */
+/* Initialize */
 boot(5);
-showPips(1); // show faces at boot
 </script>
 </body>
 </html>
+
 
 

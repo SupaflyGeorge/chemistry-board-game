@@ -135,9 +135,10 @@
    20 is FINISH (tile before START).
 =========================================================== */
 
+// NOT FINISHED NEED TO UPDATE
 const BOARD = [
   {type:'start', label:'START'},                                     // 0
-  {type:'reaction', text:'Event (1) – nothing happens.'},            // 1
+  {type:'reaction', text:'Event (1) – You put mentos in coke (Big Mistake)', effect:{points:-2}},         // 1
   {type:'reaction', text:'Event (2) – +1 point.', effect:{points:+1}},// 2
   {type:'question', q:'Pure water has pH 7. It is:', choices:['Acidic','Basic','Neutral','Corrosive'], answer:'C', points:{correct:2, wrong:-1}}, // 3
   {type:'reaction', text:'Give a sentence with “usually.”', teacher:true}, // 4

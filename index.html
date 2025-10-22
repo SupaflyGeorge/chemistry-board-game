@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Chemistry Board Game – Canva Edition</title>
+<title>Chemistry Board Game – The George Way/title>
 <style>
   :root{ --ink:#111; --good:#2ecc71; --bad:#e74c3c; --panel:#ffffffcc; }
   *{ box-sizing:border-box }
@@ -29,7 +29,7 @@
   .p1{ background:#ff5d5d } .p2{ background:#5d9bff } .p3{ background:#50d890 }
   .p4{ background:#ffd166 } .p5{ background:#b07aff }
 
-  /* Center Dice (with pips) */
+  /* Center Dice */
   .dice{
     position:absolute; inset:0; margin:auto; width:min(18vmin,140px); height:min(18vmin,140px);
     background:#cc6b6b; border-radius:22px; box-shadow:inset 0 -8px 0 #00000025, 0 10px 25px #00000025;
@@ -48,7 +48,7 @@
 
   .roll-hint{ position:absolute; left:50%; top:56%; transform:translateX(-50%); font-size:14px; background:#ffffffcc; padding:4px 10px; border-radius:999px; z-index:6 }
 
-  /* HUD (below board) */
+  /* HUD */
   .hud{ display:flex; flex-wrap:wrap; justify-content:center; gap:12px; }
   .panel{ background:var(--panel); backdrop-filter:blur(4px); border:1px solid #00000018; border-radius:12px; padding:10px 14px; box-shadow:0 8px 24px #00000020 }
   .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap }
@@ -74,10 +74,10 @@
 <div class="board-wrap" id="board">
   <div class="board-bg" aria-hidden="true"></div>
 
-  <!-- Center Dice with Pips -->
+  <!-- Center Dice Init -->
   <div id="dice" class="dice" title="Roll">
     <div class="pips" id="pips">
-      <!-- 9 cells (3x3) -->
+   
       <div class="pip" data-pos="1"></div>
       <div class="pip" data-pos="2"></div>
       <div class="pip" data-pos="3"></div>
@@ -159,18 +159,18 @@ const BOARD = [
   {type:'finish', label:'FINISH'}                                   // 20
 ];
 
-/* PATH in board-relative percent coords (tweak if needed) */
+/* Pathing*/
 function buildPath(){
   const path = [];
   // Start (bottom-left corner area)
   path.push({x:8, y:92});                                 // 0 START
 
   // Up the left side (1..5)
-  path.push({x:8, y:77});  // 1
-  path.push({x:8, y:62});  // 2
-  path.push({x:8, y:47});  // 3
-  path.push({x:8, y:32});  // 4
-  path.push({x:8, y:17});  // 5 (top-left)
+  path.push({x:10, y:77});  // 1
+  path.push({x:10, y:62});  // 2
+  path.push({x:10, y:47});  // 3
+  path.push({x:10, y:32});  // 4
+  path.push({x:10, y:17});  // 5 (top-left)
 
   // Across the top, left->right (6..10)
   path.push({x:23, y:8});  // 6
@@ -196,10 +196,10 @@ function buildPath(){
 }
 const PATH = buildPath(); // length = 21 (0..20)
 
-/* Players */
+/* Player Names (aka the idiots */
 const NAMES_DEFAULT = ["George","Angie","Kobe","Walter","Alexander"];
 
-/* DOM refs */
+
 const boardEl = document.getElementById('board');
 const diceEl  = document.getElementById('dice');
 const pipsEl  = document.getElementById('pips');
@@ -210,24 +210,24 @@ const rollChip  = document.getElementById('rollChip');
 document.getElementById('apply').onclick = ()=> boot(Number(document.getElementById('playerCount').value||5));
 document.getElementById('reset').onclick = ()=> boot(Number(document.getElementById('playerCount').value||5));
 
-/* Game state */
-let players = [];  // {name,pos,score,skip,done,token}
+/* States */
+let players = [];  
 let current = 0;
 let locked  = false;
 
 function boot(n=5){
-  // init players
+  // Init the players (aka idiots :P
   players = Array.from({length:n}, (_,i)=>({
     name: NAMES_DEFAULT[i] || `Player ${i+1}`,
     pos: 0, score: 0, skip: 0, done: false,
     token: document.getElementById('t'+(i+1))
   }));
-  // hide extra tokens
+  // hide extra tokens if <5
   for(let i=0;i<5;i++){
     const t = document.getElementById('t'+(i+1));
     t.style.display = i<n ? 'block' : 'none';
   }
-  // place tokens side-by-side at START
+  // place tokens side-by-side at START (NOT WORKING :(
   players.forEach((p,i)=> placeToken(p, 0, startNudge(i)) );
   // UI
   renderScores(); current = 0; updateTurn(); rollChip.textContent = 'Roll to start';
@@ -260,7 +260,7 @@ function placeToken(player, idx, nudge={dx:0,dy:0}){
   player.token.style.transform = `translate(-50%,-50%) translate(${nudge.dx}px,${nudge.dy}px)`;
 }
 
-/* ---------- Dice with pips ---------- */
+/* Dice Pips :) */
 const pipsMap = {
   1:[5],
   2:[1,9],
@@ -278,10 +278,10 @@ function showPips(n){
   });
 }
 
-/* ---------- Turn & Movement ---------- */
+/* Movement and Turning logic */
 diceEl.addEventListener('click', ()=>{
   if (locked) return;
-  // find a player who isn't done
+  // find a player who isn't done (always rolls)
   if (players.filter(p=>!p.done).length===0) return; // game already finished (all done)
   if (players[current].done) { nextTurn(); return; }
 
@@ -295,7 +295,7 @@ diceEl.addEventListener('click', ()=>{
   showPips(roll);
   rollChip.textContent = `Rolled ${roll}`;
 
-  // step-by-step movement; stop at FINISH index 20
+  
   let steps = roll;
   const step = ()=>{
     if (steps<=0 || p.pos>=20){ // reached FINISH already or out of steps
@@ -322,7 +322,7 @@ function landed(){
     toast(`🎉 ${p.name} reached FINISH! (+3 pts)`);
   }
 
-  if (p.done){ // if done, end landing quickly
+  if (p.done){
     locked=false;
     // if everyone finished, announce winner
     if (players.every(pp=>pp.done)){
@@ -358,7 +358,7 @@ function nextTurn(){
   updateTurn();
 }
 
-/* ---------- Modal helpers ---------- */
+/* Helpers  */
 const modal=document.getElementById('modal');
 const modalContent=document.getElementById('modalContent');
 function openModal(html){ modalContent.innerHTML=html; modal.classList.add('show'); }
@@ -424,12 +424,12 @@ function applyReaction(tile){
   modal.querySelector('#ok').addEventListener('click', ()=>{ closeModal(); locked=false; nextTurn(); });
 }
 
-/* Keep tokens aligned on resize */
+/* Keep tokens aligned */
 window.addEventListener('resize', ()=> players.forEach((p,i)=> placeToken(p,p.pos, p.pos===0?startNudge(i):tokenNudge(i)) ) );
 
-/* Init */
+/* Final Initialization */
 boot(5);
-showPips(1); // show a face at load
+showPips(1); // show faces at boot
 </script>
 </body>
 </html>
